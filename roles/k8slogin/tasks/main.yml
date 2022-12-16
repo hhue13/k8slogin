@@ -17,11 +17,11 @@
 - name: Host URLs must be set by the caller if K8S_HOST_URL is not set
   ansible.builtin.fail:
     msg: "No host URL provided. Either set enviroment variable K8S_HOST_URL or pass role variable k8slogin_api_url"
-    when: (
-      ( k8slogin_api_url is not definied) or
-      (k8slogin_api_url == '') or
-      (k8slogin_api_url == "dummy")
-      )
+  when: (
+    ( k8slogin_api_url is not defined) or
+    (k8slogin_api_url == '') or
+    (k8slogin_api_url == "dummy")
+    )
 
 - name: Checking for env variable K8S_API_TOKEN
   ansible.builtin.set_fact:
@@ -59,7 +59,7 @@
     ansible.builtin.fail:
       msg: "No user name for login provided. Either set enviroment variable K8S_USER or pass role variable k8slogin_kube_admin_user"
     when: (
-      ( __k8s_user is not definied) or
+      ( __k8s_user is not defined) or
       (__k8s_user == '') or
       (__k8s_user == "dummy")
       )
@@ -84,7 +84,7 @@
     ansible.builtin.fail:
       msg: "No password for login provided. Either set enviroment variable K8S_PASSWORD or pass role variable k8slogin_kube_admin_password"
     when: (
-      ( __k8s_password is not definied) or
+      ( __k8s_password is not defined) or
       (__k8s_password == '') or
       (__k8s_password == "dummy")
       )
@@ -115,8 +115,11 @@
     no_log: true
     tags:
       - always
-  when: (( k8slogin_api_key is not defined ) or
-    (k8slogin_api_key == ''))
+  when: (
+    ( k8slogin_api_key is not defined ) or
+    (k8slogin_api_key == '') or
+    (k8slogin_api_key == "dummy")
+    )
 
 ##### ##
 ##### ## Debug k8s credentials
