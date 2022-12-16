@@ -1,0 +1,7 @@
+# code: language=ansible
+---
+# defaults file for roles/k8slogin
+k8slogin_api_url: "dummy"
+k8slogin_api_key: "dummy"
+k8slogin_kube_admin_user: "dummy"
+k8slogin_kube_admin_password: "dummy"

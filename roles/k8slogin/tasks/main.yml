@@ -1,0 +1,133 @@
+# code: language=ansible
+---
+- name: Checking for env variable K8S_HOST_URL
+  ansible.builtin.set_fact:
+    __k8s_host_url: "{{ lookup('env', 'K8S_HOST_URL') }}"
+  tags:
+    - always
+
+- name: Host-URL is taken from K8S_HOST_URL if set
+  ansible.builtin.set_fact:
+    k8slogin_api_url: "{{ __k8s_host_url }}"
+  when: (( __k8s_host_url is defined) and
+    (__k8s_host_url != ''))
+  tags:
+    - always
+
+- name: Host URLs must be set by the caller if K8S_HOST_URL is not set
+  ansible.builtin.fail:
+    msg: "No host URL provided. Either set enviroment variable K8S_HOST_URL or pass role variable k8slogin_api_url"
+    when: (
+      ( k8slogin_api_url is not definied) or
+      (k8slogin_api_url == '') or
+      (k8slogin_api_url == "dummy")
+      )
+
+- name: Checking for env variable K8S_API_TOKEN
+  ansible.builtin.set_fact:
+    __k8s_api_token: "{{ lookup('env', 'K8S_API_TOKEN') }}"
+  no_log: true
+  tags:
+    - always
+
+- name: Use the api-key from the env K8S_API_TOKEN if it exists
+  ansible.builtin.set_fact:
+    k8slogin_api_key: "{{ __k8s_api_token }}"
+  when: (( __k8s_api_token is defined ) and
+    ( __k8s_api_token != '' ))
+  no_log: true
+  tags:
+    - always
+##
+## No token set or exported --> try to login using user/pwd to get token
+- block:
+  - name: Checking for env variable K8S_USER
+    ansible.builtin.set_fact:
+      __k8s_user: "{{ lookup('env', 'K8S_USER') }}"
+    tags:
+      - always
+
+  - name: If no K8S_USER is set we use the role var k8slogin_kube_admin_user
+    ansible.builtin.set_fact:
+      __k8s_user: "{{ k8slogin_kube_admin_user }}"
+    when: (( __k8s_user is not defined) or
+      (__k8s_user == ''))
+    tags:
+      - always
+
+  - name: User name must be set by the caller if K8S_USER is not set
+    ansible.builtin.fail:
+      msg: "No user name for login provided. Either set enviroment variable K8S_USER or pass role variable k8slogin_kube_admin_user"
+    when: (
+      ( __k8s_user is not definied) or
+      (__k8s_user == '') or
+      (__k8s_user == "dummy")
+      )
+
+  - name: Checking for env variable K8S_PASSWORD
+    ansible.builtin.set_fact:
+      __k8s_password: "{{ lookup('env', 'K8S_PASSWORD') }}"
+    no_log: true
+    tags:
+      - always
+
+  - name: If no K8S_PASSWORD is set we use the role variable k8slogin_kube_admin_password
+    ansible.builtin.set_fact:
+      __k8s_password: "{{ k8slogin_kube_admin_password }}"
+    when: (( __k8s_password is not defined) or
+      (__k8s_password == ''))
+    no_log: true
+    tags:
+      - always
+
+  - name: User name must be set by the caller if K8S_PASSWORD is not set
+    ansible.builtin.fail:
+      msg: "No password for login provided. Either set enviroment variable K8S_PASSWORD or pass role variable k8slogin_kube_admin_password"
+    when: (
+      ( __k8s_password is not definied) or
+      (__k8s_password == '') or
+      (__k8s_password == "dummy")
+      )
+
+  - name: Debug K8S Url & User
+    debug:
+      msg:
+        - "K8S_HOST_URL: '{{ k8slogin_api_url }}'"
+        - "K8S_USER: '{{ __k8s_user }}'"
+    tags:
+      - always
+
+  - name: Log in to {{ k8slogin_api_url }} using user {{ __k8s_user }} in to obtain access token
+    community.okd.openshift_auth:
+      host: "{{ k8slogin_api_url }}"
+      state: present
+      username: "{{ __k8s_user }}"
+      password: "{{ __k8s_password }}"
+    register: __k8s_auth_results
+    no_log: true
+    tags:
+      - always
+  ##
+  ## Use the api-key from the login
+  - name: Use the api-key from the login
+    ansible.builtin.set_fact:
+      k8slogin_api_key: "{{ __k8s_auth_results.k8s_auth.api_key }}"
+    no_log: true
+    tags:
+      - always
+  when: (( k8slogin_api_key is not defined ) or
+    (k8slogin_api_key == ''))
+
+##### ##
+##### ## Debug k8s credentials
+##### - name: Debug
+#####   debug:
+#####     msg:
+#####       - "K8S credentials - 2..."
+#####       - "kube_auth_results.api_key: {{ k8s_auth_results_2.k8s_auth.api_key }}"
+#####       - "kube_auth_results.ca_cert: {{ k8s_auth_results_2.k8s_auth.ca_cert }}"
+#####       - "kube_auth_results.host: {{ k8s_auth_results_2.k8s_auth.host }}"
+#####       - "kube_auth_results.username: {{ k8s_auth_results_2.k8s_auth.username }}"
+#####       - "kube_auth_results.validate_certs: {{ k8s_auth_results_2.k8s_auth.validate_certs }}"
+#####   tags:
+#####     - never
